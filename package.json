@@ -6,6 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:api": "pnpm --filter @chat2order/api dev",
+    "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "lint": "eslint ."
   },
