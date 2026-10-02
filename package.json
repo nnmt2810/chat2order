@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    "db:logs": "docker compose logs -f"
+    "db:logs": "docker compose logs -f",
+    "dev:web": "pnpm --filter @chat2order/web dev"
   },
   "keywords": [],
   "author": "",
