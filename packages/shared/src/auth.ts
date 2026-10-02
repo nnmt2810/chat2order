@@ -4,10 +4,7 @@ export const registerSchema = z.object({
   shopName: z.string().trim().min(2, "Tên cửa hàng tối thiểu 2 ký tự").max(100),
   name: z.string().trim().min(2, "Tên tối thiểu 2 ký tự").max(100),
   email: z.email("Email không hợp lệ"),
-  password: z
-    .string()
-    .min(8, "Mật khẩu tối thiểu 8 ký tự")
-    .max(72, "Mật khẩu tối đa 72 ký tự"),
+  password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự").max(72, "Mật khẩu tối đa 72 ký tự"),
 });
 
 export const loginSchema = z.object({
