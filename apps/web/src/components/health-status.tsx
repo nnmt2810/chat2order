@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type HealthResponse = {
   status: string;
@@ -10,36 +11,24 @@ type HealthResponse = {
 };
 
 export function HealthStatus() {
-  const { data, error, isPending, isFetching, refetch } = useQuery({
+  const { data, error, isPending } = useQuery({
     queryKey: ["health"],
     queryFn: () => apiFetch<HealthResponse>("/health"),
     refetchInterval: 10_000,
   });
 
+  const state = isPending ? "checking" : error || data?.status !== "ok" ? "down" : "ok";
+
+  const config = {
+    checking: { dot: "bg-gray-400", label: "Đang kiểm tra API..." },
+    ok: { dot: "bg-green-500", label: "API hoạt động" },
+    down: { dot: "bg-red-500", label: "Không kết nối được API" },
+  }[state];
+
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-gray-500">Trạng thái API</h2>
-
-      {isPending && <p className="mt-2 text-gray-600">Đang kiểm tra...</p>}
-
-      {error && (
-        <p className="mt-2 text-red-600">Không kết nối được API: {error.message}</p>
-      )}
-
-      {data && (
-        <p className="mt-2 text-green-700">
-          API đang hoạt động (chạy được {Math.round(data.uptime)} giây)
-        </p>
-      )}
-
-      <button
-        type="button"
-        onClick={() => refetch()}
-        disabled={isFetching}
-        className="mt-3 rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-      >
-        {isFetching ? "Đang kiểm tra..." : "Kiểm tra lại"}
-      </button>
-    </section>
+    <div className="flex items-center gap-2 text-xs text-gray-500">
+      <span className={cn("h-2 w-2 rounded-full", config.dot)} />
+      {config.label}
+    </div>
   );
 }
