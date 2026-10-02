@@ -9,7 +9,10 @@
     "dev:api": "pnpm --filter @chat2order/api dev",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f"
   },
   "keywords": [],
   "author": "",
