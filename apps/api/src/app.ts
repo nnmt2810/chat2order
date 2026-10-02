@@ -4,6 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env.js";
 import { healthRouter } from "./routes/health.js";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 
 export function createApp() {
   const app = express();
@@ -21,6 +22,9 @@ export function createApp() {
   );
 
   app.use("/health", healthRouter);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }
