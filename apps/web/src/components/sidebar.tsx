@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Inbox, Package, Users, type LucideIcon } from "lucide-react";
+import { ClipboardList, Inbox, LogOut, Package, Users, type LucideIcon } from "lucide-react";
 import { HealthStatus } from "@/components/health-status";
+import { Button } from "@/components/ui/button";
+import { useCurrentUser, useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
@@ -15,6 +17,8 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
 
   return (
     <aside className="flex w-60 shrink-0 flex-col justify-between border-r border-gray-200 bg-white p-4">
@@ -39,7 +43,24 @@ export function Sidebar() {
           })}
         </nav>
       </div>
-      <div className="px-2">
+
+      <div className="space-y-3 px-2">
+        {user && (
+          <div className="text-sm">
+            <div className="truncate font-medium">{user.name}</div>
+            <div className="truncate text-xs text-gray-500">{user.shopName}</div>
+          </div>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+        >
+          <LogOut className="h-4 w-4" />
+          Đăng xuất
+        </Button>
         <HealthStatus />
       </div>
     </aside>
