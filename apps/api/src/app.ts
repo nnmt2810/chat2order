@@ -2,15 +2,19 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
+
 import { env } from "./config/env.js";
 import { healthRouter } from "./routes/health.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { authRouter } from "./routes/auth.js";
 
 export function createApp() {
   const app = express();
+  app.use(cookieParser());
 
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGIN }));
+  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
   app.use(
     rateLimit({
@@ -22,6 +26,7 @@ export function createApp() {
   );
 
   app.use("/health", healthRouter);
+  app.use("/auth", authRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

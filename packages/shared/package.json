@@ -10,5 +10,8 @@
   "type": "module",
   "dependencies": {
     "zod": "^4.6.5"
+  },
+  "exports": {
+    "./auth": "./src/auth.ts"
   }
 }
