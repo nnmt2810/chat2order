@@ -44,10 +44,7 @@ export const productListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  includeInactive: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((value) => value === "true"),
+  status: z.enum(["active", "archived", "all"]).default("active"),
 });
 
 export type ProductInput = z.infer<typeof productInputSchema>;
