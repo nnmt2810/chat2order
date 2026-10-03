@@ -12,6 +12,7 @@
     "zod": "^4.6.5"
   },
   "exports": {
-    "./auth": "./src/auth.ts"
+    "./auth": "./src/auth.ts",
+    "./product": "./src/product.ts"
   }
 }
