@@ -19,9 +19,13 @@ export const productInputSchema = z.object({
     .regex(/^[A-Z0-9][A-Z0-9._-]*$/, "Mã chỉ gồm chữ, số và các ký tự . _ -"),
   name: z.string().trim().min(1, "Vui lòng nhập tên sản phẩm").max(200),
   unit: z.string().trim().min(1, "Vui lòng nhập đơn vị tính").max(30),
-  price: z.number().int("Giá phải là số nguyên").min(0, "Giá không được âm").max(1_000_000_000),
+  price: z
+    .number({ error: "Vui lòng nhập một số" })
+    .int("Giá phải là số nguyên")
+    .min(0, "Giá không được âm")
+    .max(1_000_000_000),
   stock: z
-    .number()
+    .number({ error: "Vui lòng nhập một số" })
     .int("Tồn kho phải là số nguyên")
     .min(0, "Tồn kho không được âm")
     .max(10_000_000),
