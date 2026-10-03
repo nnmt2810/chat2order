@@ -52,9 +52,16 @@ export async function listProducts(
   shopId: string,
   query: ProductListQuery,
 ): Promise<ProductListResponse> {
+  const statusFilter =
+    query.status === "active"
+      ? { isActive: true }
+      : query.status === "archived"
+        ? { isActive: false }
+        : {};
+
   const where = {
     shopId,
-    ...(query.includeInactive ? {} : { isActive: true }),
+    ...statusFilter,
     ...(query.q
       ? {
           OR: [

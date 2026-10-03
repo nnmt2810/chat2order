@@ -19,9 +19,13 @@ export const productInputSchema = z.object({
     .regex(/^[A-Z0-9][A-Z0-9._-]*$/, "Mã chỉ gồm chữ, số và các ký tự . _ -"),
   name: z.string().trim().min(1, "Vui lòng nhập tên sản phẩm").max(200),
   unit: z.string().trim().min(1, "Vui lòng nhập đơn vị tính").max(30),
-  price: z.number().int("Giá phải là số nguyên").min(0, "Giá không được âm").max(1_000_000_000),
+  price: z
+    .number({ error: "Vui lòng nhập một số" })
+    .int("Giá phải là số nguyên")
+    .min(0, "Giá không được âm")
+    .max(1_000_000_000),
   stock: z
-    .number()
+    .number({ error: "Vui lòng nhập một số" })
     .int("Tồn kho phải là số nguyên")
     .min(0, "Tồn kho không được âm")
     .max(10_000_000),
@@ -40,10 +44,7 @@ export const productListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  includeInactive: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((value) => value === "true"),
+  status: z.enum(["active", "archived", "all"]).default("active"),
 });
 
 export type ProductInput = z.infer<typeof productInputSchema>;
