@@ -18,6 +18,7 @@ model Shop {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   users     User[]
+  products  Product[]
 
   @@map("shops")
 }
@@ -35,4 +36,22 @@ model User {
 
   @@index([shopId])
   @@map("users")
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  sku       String
+  name      String
+  unit      String
+  price     Int
+  stock     Int      @default(0)
+  aliases   String[] @default([])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, sku])
+  @@map("products")
 }
