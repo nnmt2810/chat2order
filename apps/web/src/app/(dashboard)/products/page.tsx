@@ -1,7 +1,5 @@
-import { PagePlaceholder } from "@/components/page-placeholder";
+import { ProductsView } from "@/components/products/products-view";
 
 export default function ProductsPage() {
-  return (
-    <PagePlaceholder title="Sản phẩm & tồn kho" description="Quản lý sản phẩm, giá, và tồn kho." />
-  );
+  return <ProductsView />;
 }
