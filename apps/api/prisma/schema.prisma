@@ -19,8 +19,25 @@ model Shop {
   updatedAt DateTime @updatedAt
   users     User[]
   products  Product[]
+  customers Customer[]
 
   @@map("shops")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  name      String
+  phone     String   @default("")
+  address   String   @default("")
+  note      String   @default("")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId, name])
+  @@map("customers")
 }
 
 model User {
