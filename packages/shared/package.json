@@ -13,6 +13,7 @@
   },
   "exports": {
     "./auth": "./src/auth.ts",
-    "./product": "./src/product.ts"
+    "./product": "./src/product.ts",
+    "./customer": "./src/customer.ts"
   }
 }
