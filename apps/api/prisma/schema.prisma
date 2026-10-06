@@ -15,11 +15,13 @@ enum Role {
 model Shop {
   id        String   @id @default(uuid())
   name      String
+  orderSeq  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   users     User[]
   products  Product[]
   customers Customer[]
+  orders Order[]
 
   @@map("shops")
 }
@@ -35,6 +37,7 @@ model Customer {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orders Order[]
 
   @@index([shopId, name])
   @@map("customers")
@@ -68,7 +71,60 @@ model Product {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orderItems OrderItem[]
 
   @@unique([shopId, sku])
   @@map("products")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  shopId          String
+  shop            Shop        @relation(fields: [shopId], references: [id])
+  number          Int
+  status          OrderStatus @default(PENDING)
+  customerId      String
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  customerName    String
+  customerPhone   String      @default("")
+  deliveryAddress String      @default("")
+  deliveryDate    DateTime?   @db.Date
+  note            String      @default("")
+  shippingFee     Int         @default(0)
+  total           Int
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([shopId, number])
+  @@index([shopId, status, createdAt])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  position  Int
+  sku       String
+  name      String
+  unit      String
+  unitPrice Int
+  quantity  Int
+  lineTotal Int
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }

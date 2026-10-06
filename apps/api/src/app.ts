@@ -10,6 +10,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { authRouter } from "./routes/auth.js";
 import { productsRouter } from "./routes/products.js";
 import { customersRouter } from "./routes/customers.js";
+import { ordersRouter } from "./routes/orders.js";
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp() {
   app.use("/auth", authRouter);
   app.use("/products", productsRouter);
   app.use("/customers", customersRouter);
+  app.use("/orders", ordersRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
