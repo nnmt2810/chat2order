@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/components/page-placeholder";
+import { CustomersView } from "@/components/customers/customers-view";
 
 export default function CustomersPage() {
-  return <PagePlaceholder title="Khách hàng" description="Profile khách hàng và lịch sử đơn." />;
+  return <CustomersView />;
 }
