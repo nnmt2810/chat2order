@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { orderStatusLabels, orderStatuses, type OrderListQuery } from "@chat2order/shared/order";
 import { Pagination } from "@/components/common/pagination";
 import { SearchBox } from "@/components/common/search-box";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useOrders } from "@/lib/orders";
 import { useDebounce } from "@/lib/use-debounce";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -20,6 +22,7 @@ const filters: { value: StatusFilter; label: string }[] = [
 ];
 
 export function OrdersView() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
@@ -37,7 +40,13 @@ export function OrdersView() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Đơn hàng</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Đơn hàng</h1>
+        <Button onClick={() => router.push("/orders/new")}>
+          <Plus className="h-4 w-4" />
+          Tạo đơn
+        </Button>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {filters.map((filter) => (
