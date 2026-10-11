@@ -1,7 +1,10 @@
 import {
   MAX_ORDER_TOTAL,
+  canTransition,
   computeOrderTotals,
   formatOrderCode,
+  orderStatusLabels,
+  stockEffect,
   type OrderDto,
   type OrderInput,
   type OrderItemInput,
@@ -280,4 +283,70 @@ export async function updateOrder(
     }
     throw err;
   }
+}
+
+export async function changeOrderStatus(
+  shopId: string,
+  id: string,
+  target: OrderStatus,
+): Promise<OrderDto> {
+  const row = await prisma.$transaction(async (tx) => {
+    const existing = await tx.order.findFirst({ where: { id, shopId }, include: orderInclude });
+    if (!existing) {
+      throw new AppError(404, "Không tìm thấy đơn hàng", "ORDER_NOT_FOUND");
+    }
+
+    const from = existing.status;
+    if (!canTransition(from, target)) {
+      throw new AppError(
+        409,
+        `Không thể chuyển đơn từ "${orderStatusLabels[from]}" sang "${orderStatusLabels[target]}"`,
+        "INVALID_TRANSITION",
+      );
+    }
+
+    // Giành quyền chuyển trạng thái: chỉ một lệnh khớp được khi có nhiều người bấm cùng lúc
+    const claimed = await tx.order.updateMany({
+      where: { id, shopId, status: from },
+      data: { status: target },
+    });
+    if (claimed.count === 0) {
+      throw new AppError(
+        409,
+        "Đơn hàng vừa thay đổi trạng thái, vui lòng tải lại",
+        "ORDER_STATUS_CHANGED",
+      );
+    }
+
+    // Xử lý theo thứ tự productId để hai đơn không khóa chéo nhau
+    const lines = [...existing.items].sort((a, b) => a.productId.localeCompare(b.productId));
+    const effect = stockEffect(from, target);
+
+    if (effect === "deduct") {
+      for (const line of lines) {
+        const result = await tx.product.updateMany({
+          where: { id: line.productId, shopId, stock: { gte: line.quantity } },
+          data: { stock: { decrement: line.quantity } },
+        });
+        if (result.count === 0) {
+          throw new AppError(409, `Không đủ hàng trong kho: ${line.name}`, "INSUFFICIENT_STOCK");
+        }
+      }
+    } else if (effect === "restore") {
+      for (const line of lines) {
+        await tx.product.updateMany({
+          where: { id: line.productId, shopId },
+          data: { stock: { increment: line.quantity } },
+        });
+      }
+    }
+
+    const updated = await tx.order.findFirst({ where: { id, shopId }, include: orderInclude });
+    if (!updated) {
+      throw new AppError(404, "Không tìm thấy đơn hàng", "ORDER_NOT_FOUND");
+    }
+    return updated;
+  });
+
+  return toDto(row);
 }
