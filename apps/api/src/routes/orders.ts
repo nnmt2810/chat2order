@@ -2,10 +2,17 @@ import { Router } from "express";
 import {
   orderInputSchema,
   orderListQuerySchema,
+  orderStatusChangeSchema,
   orderUpdateSchema,
 } from "@chat2order/shared/order";
 import { getAuth, requireAuth } from "../middleware/require-auth.js";
-import { createOrder, getOrder, listOrders, updateOrder } from "../services/orders.js";
+import {
+  changeOrderStatus,
+  createOrder,
+  getOrder,
+  listOrders,
+  updateOrder,
+} from "../services/orders.js";
 
 export const ordersRouter = Router();
 
@@ -32,4 +39,10 @@ ordersRouter.patch("/:id", async (req, res) => {
   const input = orderUpdateSchema.parse(req.body);
   const { shopId } = getAuth(res);
   res.json({ order: await updateOrder(shopId, req.params.id, input) });
+});
+
+ordersRouter.patch("/:id/status", async (req, res) => {
+  const { status } = orderStatusChangeSchema.parse(req.body);
+  const { shopId } = getAuth(res);
+  res.json({ order: await changeOrderStatus(shopId, req.params.id, status) });
 });

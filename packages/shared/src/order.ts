@@ -122,3 +122,36 @@ export type OrderListResponse = {
   page: number;
   pageSize: number;
 };
+
+export const orderStatusLabels: Record<OrderStatus, string> = {
+  PENDING: "Chờ xác nhận",
+  CONFIRMED: "Đã xác nhận",
+  SHIPPING: "Đang giao",
+  COMPLETED: "Hoàn tất",
+  CANCELLED: "Đã hủy",
+};
+
+export const orderTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["SHIPPING", "CANCELLED"],
+  SHIPPING: ["COMPLETED", "CANCELLED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
+  return orderTransitions[from].includes(to);
+}
+
+// Chuyển trạng thái nào thì trừ kho, hoàn kho, hay không đụng đến kho
+export function stockEffect(from: OrderStatus, to: OrderStatus): "deduct" | "restore" | "none" {
+  if (from === "PENDING" && to === "CONFIRMED") return "deduct";
+  if ((from === "CONFIRMED" || from === "SHIPPING") && to === "CANCELLED") return "restore";
+  return "none";
+}
+
+export const orderStatusChangeSchema = z.object({
+  status: z.enum(["CONFIRMED", "SHIPPING", "COMPLETED", "CANCELLED"]),
+});
+
+export type OrderStatusChange = z.infer<typeof orderStatusChangeSchema>;
