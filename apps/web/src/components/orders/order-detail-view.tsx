@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   orderStatusLabels,
   orderTransitions,
@@ -75,6 +76,7 @@ function BackLink() {
 }
 
 export function OrderDetailView({ id }: { id: string }) {
+  const router = useRouter();
   const { data: order, error, isPending, refetch } = useOrder(id);
   const changeStatus = useChangeOrderStatus();
   const [pendingTarget, setPendingTarget] = useState<TargetStatus | null>(null);
@@ -130,6 +132,15 @@ export function OrderDetailView({ id }: { id: string }) {
 
         {targets.length > 0 && (
           <div className="flex flex-wrap gap-2">
+            {order.status === "PENDING" && (
+              <Button
+                variant="outline"
+                disabled={changeStatus.isPending}
+                onClick={() => router.push(`/orders/${order.id}/edit`)}
+              >
+                Sửa đơn
+              </Button>
+            )}
             {targets.map((target) => (
               <Button
                 key={target}
