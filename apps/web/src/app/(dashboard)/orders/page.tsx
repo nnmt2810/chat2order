@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/components/page-placeholder";
+import { OrdersView } from "@/components/orders/orders-view";
 
 export default function OrdersPage() {
-  return <PagePlaceholder title="Đơn hàng" description="Danh sách đơn." />;
+  return <OrdersView />;
 }
