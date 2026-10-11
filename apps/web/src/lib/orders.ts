@@ -3,9 +3,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   OrderDto,
+  OrderInput,
   OrderListQuery,
   OrderListResponse,
   OrderStatusChange,
+  OrderUpdate,
 } from "@chat2order/shared/order";
 import { apiFetch } from "@/lib/api";
 
@@ -60,5 +62,30 @@ export function useChangeOrderStatus() {
         // Đổi trạng thái có thể trừ hoặc hoàn tồn kho, nên danh sách sản phẩm cũng cần tải lại
         queryClient.invalidateQueries({ queryKey: ["products"] }),
       ]),
+  });
+}
+
+export function useCreateOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: OrderInput) =>
+      apiFetch<{ order: OrderDto }>("/orders", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: orderKeys.all }),
+  });
+}
+
+export function useUpdateOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: OrderUpdate }) =>
+      apiFetch<{ order: OrderDto }>(`/orders/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      }),
+    // Chạy cả khi lỗi: đơn có thể vừa bị đổi trạng thái ở nơi khác
+    onSettled: () => queryClient.invalidateQueries({ queryKey: orderKeys.all }),
   });
 }
