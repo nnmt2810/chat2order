@@ -155,9 +155,7 @@ function ProductForm({ product, onDone }: { product: ProductDto | null; onDone: 
           placeholder="nước suối nhỏ, chai nhỏ"
           {...register("aliasesText")}
         />
-        {errors.aliasesText && (
-          <p className="text-sm text-red-600">{errors.aliasesText.message}</p>
-        )}
+        {errors.aliasesText && <p className="text-sm text-red-600">{errors.aliasesText.message}</p>}
       </div>
 
       {serverError && (
