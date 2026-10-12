@@ -1,20 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { Pagination } from "@/components/common/pagination";
+import { SearchBox } from "@/components/common/search-box";
 import type { ProductDto } from "@chat2order/shared/product";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductTable } from "@/components/products/product-table";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/lib/use-debounce";
 import { useArchiveProduct, useProducts, useUpdateProduct } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -85,18 +79,14 @@ export function ProductsView() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            className="pl-9"
-            placeholder="Tìm theo tên hoặc mã SKU"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
+        <SearchBox
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          placeholder="Tìm theo tên hoặc mã SKU"
+        />
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="checkbox"
@@ -145,29 +135,13 @@ export function ProductsView() {
             onArchive={setArchiveTarget}
             onRestore={restore}
           />
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              Trang {data.page}/{totalPages} · {data.total} sản phẩm
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Trước
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                Sau
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            page={data.page}
+            totalPages={totalPages}
+            total={data.total}
+            noun="sản phẩm"
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -177,30 +151,16 @@ export function ProductsView() {
         onOpenChange={(open) => setFormState((state) => ({ ...state, open }))}
       />
 
-      <Dialog
+      <ConfirmDialog
         open={archiveTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setArchiveTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Lưu trữ sản phẩm?</DialogTitle>
-            <DialogDescription>
-              &quot;{archiveTarget?.name}&quot; sẽ bị ẩn khỏi danh sách mặc định. Bạn có thể khôi
-              phục lại bất cứ lúc nào, và lịch sử đơn hàng cũ không bị ảnh hưởng.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setArchiveTarget(null)}>
-              Hủy
-            </Button>
-            <Button onClick={confirmArchive} disabled={archive.isPending}>
-              {archive.isPending ? "Đang lưu trữ..." : "Lưu trữ"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Lưu trữ sản phẩm?"
+        description={`"${archiveTarget?.name ?? ""}" sẽ bị ẩn khỏi danh sách mặc định. Bạn có thể khôi phục lại bất cứ lúc nào, và lịch sử đơn hàng cũ không bị ảnh hưởng.`}
+        confirmLabel="Lưu trữ"
+        pendingLabel="Đang lưu trữ..."
+        pending={archive.isPending}
+        onConfirm={confirmArchive}
+        onCancel={() => setArchiveTarget(null)}
+      />
     </div>
   );
 }
