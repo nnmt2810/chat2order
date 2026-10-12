@@ -54,9 +54,7 @@ export function ProductTable({ items, onEdit, onArchive, onRestore }: ProductTab
                     </Badge>
                   ))}
                   {product.aliases.length > MAX_ALIASES_SHOWN && (
-                    <Badge variant="outline">
-                      +{product.aliases.length - MAX_ALIASES_SHOWN}
-                    </Badge>
+                    <Badge variant="outline">+{product.aliases.length - MAX_ALIASES_SHOWN}</Badge>
                   )}
                 </div>
               </TableCell>

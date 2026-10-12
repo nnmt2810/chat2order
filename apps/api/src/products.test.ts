@@ -100,9 +100,7 @@ describe("GET /products", () => {
     const res = await request(app).get("/products?status=all").set("Cookie", cookie);
 
     expect(res.status).toBe(200);
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { shopId: "shop-1" } }),
-    );
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { shopId: "shop-1" } }));
   });
 
   it("rejects an unknown status with 400", async () => {

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Giá trị giả lập chỉ để code khởi động được trong CI, không phải bí mật
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chat2order
+      JWT_SECRET: ci-only-placeholder-secret-0123456789abcdef
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@24
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @chat2order/api db:generate
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint (api and shared)
+        run: pnpm lint
+
+      - name: Lint (web)
+        run: pnpm --filter @chat2order/web lint
+
+      - name: Test
+        run: pnpm test
