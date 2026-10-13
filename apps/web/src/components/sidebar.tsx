@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Inbox, LogOut, Package, Users, type LucideIcon } from "lucide-react";
+import {
+  ClipboardList,
+  FlaskConical,
+  Inbox,
+  LogOut,
+  Package,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { HealthStatus } from "@/components/health-status";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/lib/auth";
+import { useUnreadConversationCount } from "@/lib/conversations";
 import { cn } from "@/lib/utils";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
@@ -13,9 +22,12 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/orders", label: "Đơn hàng", icon: ClipboardList },
   { href: "/products", label: "Sản phẩm", icon: Package },
   { href: "/customers", label: "Khách hàng", icon: Users },
+  { href: "/simulator", label: "Giả lập khách", icon: FlaskConical },
 ];
 
 export function Sidebar() {
+  const { data: unreadCount } = useUnreadConversationCount();
+  const unread = unreadCount ?? 0;
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
   const logout = useLogout();
@@ -37,7 +49,12 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {href === "/inbox" && unread > 0 && (
+                  <span className="rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
               </Link>
             );
           })}
