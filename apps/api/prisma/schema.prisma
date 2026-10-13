@@ -22,6 +22,7 @@ model Shop {
   products  Product[]
   customers Customer[]
   orders Order[]
+  conversations Conversation[]
 
   @@map("shops")
 }
@@ -38,6 +39,7 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders Order[]
+  conversations Conversation[]
 
   @@index([shopId, name])
   @@map("customers")
@@ -127,4 +129,50 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+enum Channel {
+  WEB
+  ZALO
+  MESSENGER
+  SIMULATOR
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Conversation {
+  id                 String    @id @default(uuid())
+  shopId             String
+  shop               Shop      @relation(fields: [shopId], references: [id])
+  channel            Channel
+  externalId         String
+  displayName        String    @default("")
+  customerId         String?
+  customer           Customer? @relation(fields: [customerId], references: [id])
+  unreadCount        Int       @default(0)
+  lastMessageAt      DateTime
+  lastMessagePreview String    @default("")
+  messages           Message[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([shopId, channel, externalId])
+  @@index([shopId, lastMessageAt])
+  @@index([customerId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      MessageDirection
+  text           String
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

@@ -15,6 +15,7 @@
     "./auth": "./src/auth.ts",
     "./product": "./src/product.ts",
     "./customer": "./src/customer.ts",
-    "./order": "./src/order.ts"
+    "./order": "./src/order.ts",
+    "./conversation": "./src/conversation.ts"
   }
 }
