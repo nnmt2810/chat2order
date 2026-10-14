@@ -9,8 +9,10 @@ import type {
   MessageListResponse,
   SimulatedMessageInput,
 } from "@chat2order/shared/conversation";
+import type { CustomerInput } from "@chat2order/shared/customer";
 import { AppError } from "../lib/app-error.js";
 import { prisma } from "../lib/prisma.js";
+import { prismaErrorCode } from "../lib/prisma-error.js";
 
 const PREVIEW_LENGTH = 100;
 
@@ -22,6 +24,7 @@ type ConversationRow = {
   unreadCount: number;
   lastMessageAt: Date;
   lastMessagePreview: string;
+  lastMessageDirection: MessageDirection;
   createdAt: Date;
   customer: { name: string } | null;
 };
@@ -32,7 +35,10 @@ type MessageRow = {
   direction: MessageDirection;
   text: string;
   createdAt: Date;
+  author?: { name: string } | null;
 };
+
+const customerNameSelect = { customer: { select: { name: true } } };
 
 function toConversationDto(row: ConversationRow): ConversationDto {
   return {
@@ -45,6 +51,7 @@ function toConversationDto(row: ConversationRow): ConversationDto {
     unreadCount: row.unreadCount,
     lastMessageAt: row.lastMessageAt.toISOString(),
     lastMessagePreview: row.lastMessagePreview,
+    lastMessageDirection: row.lastMessageDirection,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -55,12 +62,17 @@ function toMessageDto(row: MessageRow): MessageDto {
     conversationId: row.conversationId,
     direction: row.direction,
     text: row.text,
+    authorName: row.author?.name ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
 
 function makePreview(text: string): string {
   return text.replace(/\s+/g, " ").trim().slice(0, PREVIEW_LENGTH);
+}
+
+function conversationNotFound() {
+  return new AppError(404, "Không tìm thấy hội thoại", "CONVERSATION_NOT_FOUND");
 }
 
 type IngestInput = {
@@ -92,15 +104,17 @@ export async function ingestInboundMessage(
         unreadCount: 1,
         lastMessageAt: now,
         lastMessagePreview: preview,
+        lastMessageDirection: "INBOUND",
       },
       update: {
         unreadCount: { increment: 1 },
         lastMessageAt: now,
         lastMessagePreview: preview,
+        lastMessageDirection: "INBOUND",
         ...(displayName ? { displayName } : {}),
         ...(customerId ? { customerId } : {}),
       },
-      include: { customer: { select: { name: true } } },
+      include: customerNameSelect,
     });
 
     const message = await tx.message.create({
@@ -167,7 +181,7 @@ export async function listConversations(
   const [rows, total] = await Promise.all([
     prisma.conversation.findMany({
       where,
-      include: { customer: { select: { name: true } } },
+      include: customerNameSelect,
       orderBy: [{ lastMessageAt: "desc" }, { id: "desc" }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
@@ -181,10 +195,10 @@ export async function listConversations(
 export async function getConversation(shopId: string, id: string): Promise<ConversationDto> {
   const row = await prisma.conversation.findFirst({
     where: { id, shopId },
-    include: { customer: { select: { name: true } } },
+    include: customerNameSelect,
   });
   if (!row) {
-    throw new AppError(404, "Không tìm thấy hội thoại", "CONVERSATION_NOT_FOUND");
+    throw conversationNotFound();
   }
   return toConversationDto(row);
 }
@@ -199,12 +213,13 @@ export async function listMessages(
     select: { id: true },
   });
   if (!conversation) {
-    throw new AppError(404, "Không tìm thấy hội thoại", "CONVERSATION_NOT_FOUND");
+    throw conversationNotFound();
   }
 
   // Lấy mới nhất trước, thừa một tin để biết còn tin cũ hơn hay không
   const rows = await prisma.message.findMany({
     where: { conversationId: conversation.id },
+    include: { author: { select: { name: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: query.limit + 1,
     ...(query.before ? { cursor: { id: query.before }, skip: 1 } : {}),
@@ -221,6 +236,119 @@ export async function markConversationRead(shopId: string, id: string): Promise<
     data: { unreadCount: 0 },
   });
   if (result.count === 0) {
-    throw new AppError(404, "Không tìm thấy hội thoại", "CONVERSATION_NOT_FOUND");
+    throw conversationNotFound();
   }
+}
+
+// Chủ shop trả lời: lưu tin OUTBOUND, đánh dấu đã đọc, cập nhật xem trước của hội thoại
+export async function replyToConversation(
+  shopId: string,
+  userId: string,
+  conversationId: string,
+  text: string,
+): Promise<MessageDto> {
+  const now = new Date();
+
+  const row = await prisma.$transaction(async (tx) => {
+    // Cập nhật hội thoại trước: không khớp cửa hàng thì dừng ngay, chưa tạo tin nhắn nào
+    const claimed = await tx.conversation.updateMany({
+      where: { id: conversationId, shopId },
+      data: {
+        lastMessageAt: now,
+        lastMessagePreview: makePreview(text),
+        lastMessageDirection: "OUTBOUND",
+        unreadCount: 0,
+      },
+    });
+    if (claimed.count === 0) {
+      throw conversationNotFound();
+    }
+
+    return tx.message.create({
+      data: { conversationId, direction: "OUTBOUND", text, authorId: userId },
+      include: { author: { select: { name: true } } },
+    });
+  });
+
+  return toMessageDto(row);
+}
+
+// customerId = null để gỡ liên kết
+export async function linkConversationCustomer(
+  shopId: string,
+  conversationId: string,
+  customerId: string | null,
+): Promise<ConversationDto> {
+  if (customerId !== null) {
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, shopId, isActive: true },
+      select: { id: true },
+    });
+    if (!customer) {
+      throw new AppError(404, "Không tìm thấy khách hàng", "CUSTOMER_NOT_FOUND");
+    }
+  }
+
+  try {
+    const row = await prisma.conversation.update({
+      where: { id: conversationId, shopId },
+      data: { customerId },
+      include: customerNameSelect,
+    });
+    return toConversationDto(row);
+  } catch (err) {
+    if (prismaErrorCode(err) === "P2025") {
+      throw conversationNotFound();
+    }
+    throw err;
+  }
+}
+
+function alreadyLinked() {
+  return new AppError(
+    409,
+    "Hội thoại này đã liên kết với một khách hàng",
+    "CONVERSATION_ALREADY_LINKED",
+  );
+}
+
+// Tạo hồ sơ khách mới và liên kết với hội thoại, hoặc cả hai cùng xảy ra, hoặc không có gì
+export async function createCustomerFromConversation(
+  shopId: string,
+  conversationId: string,
+  input: CustomerInput,
+): Promise<ConversationDto> {
+  const row = await prisma.$transaction(async (tx) => {
+    const existing = await tx.conversation.findFirst({
+      where: { id: conversationId, shopId },
+      select: { customerId: true },
+    });
+    if (!existing) {
+      throw conversationNotFound();
+    }
+    if (existing.customerId) {
+      throw alreadyLinked();
+    }
+
+    const customer = await tx.customer.create({ data: { ...input, shopId } });
+
+    // Chỉ liên kết nếu hội thoại vẫn chưa có khách. Nếu có người khác vừa liên kết thì hoàn lại cả khách vừa tạo
+    const claimed = await tx.conversation.updateMany({
+      where: { id: conversationId, shopId, customerId: null },
+      data: { customerId: customer.id },
+    });
+    if (claimed.count === 0) {
+      throw alreadyLinked();
+    }
+
+    return tx.conversation.findFirst({
+      where: { id: conversationId, shopId },
+      include: customerNameSelect,
+    });
+  });
+
+  if (!row) {
+    throw conversationNotFound();
+  }
+  return toConversationDto(row);
 }
