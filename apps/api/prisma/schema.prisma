@@ -55,6 +55,7 @@ model User {
   role         Role     @default(STAFF)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  messages     Message[]
 
   @@index([shopId])
   @@map("users")
@@ -155,6 +156,7 @@ model Conversation {
   unreadCount        Int       @default(0)
   lastMessageAt      DateTime
   lastMessagePreview String    @default("")
+  lastMessageDirection MessageDirection @default(INBOUND)
   messages           Message[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -171,6 +173,8 @@ model Message {
   conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   direction      MessageDirection
   text           String
+  authorId       String?
+  author         User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
   createdAt      DateTime         @default(now())
 
   @@index([conversationId, createdAt])

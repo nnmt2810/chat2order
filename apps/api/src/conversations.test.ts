@@ -46,6 +46,7 @@ const conversationRow = {
   unreadCount: 1,
   lastMessageAt: new Date("2026-10-12T00:00:00Z"),
   lastMessagePreview: "xin chao",
+  lastMessageDirection: "INBOUND",
   createdAt: new Date("2026-10-12T00:00:00Z"),
   updatedAt: new Date("2026-10-12T00:00:00Z"),
   customer: { name: "Chi Lan" },
@@ -270,7 +271,10 @@ describe("POST /simulator/messages", () => {
           },
         },
         create: expect.objectContaining({ customerId: "c1", unreadCount: 1 }),
-        update: expect.objectContaining({ unreadCount: { increment: 1 } }),
+        update: expect.objectContaining({
+          unreadCount: { increment: 1 },
+          lastMessageDirection: "INBOUND",
+        }),
       }),
     );
     expect(tx.message.create).toHaveBeenCalledWith({
