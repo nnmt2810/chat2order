@@ -62,6 +62,7 @@ export type ConversationDto = {
   unreadCount: number;
   lastMessageAt: string;
   lastMessagePreview: string;
+  lastMessageDirection: MessageDirection;
   createdAt: string;
 };
 
@@ -70,6 +71,7 @@ export type MessageDto = {
   conversationId: string;
   direction: MessageDirection;
   text: string;
+  authorName: string | null;
   createdAt: string;
 };
 
@@ -84,3 +86,13 @@ export type MessageListResponse = {
   items: MessageDto[];
   hasMore: boolean;
 };
+
+export const replyMessageSchema = z.object({ text: messageTextSchema });
+
+// customerId = null nghĩa là gỡ liên kết
+export const linkCustomerSchema = z.object({
+  customerId: z.string().min(1).max(100).nullable(),
+});
+
+export type ReplyMessageInput = z.infer<typeof replyMessageSchema>;
+export type LinkCustomerInput = z.infer<typeof linkCustomerSchema>;
