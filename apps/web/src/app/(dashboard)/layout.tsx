@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { AuthGuard } from "@/components/auth-guard";
 import { Sidebar } from "@/components/sidebar";
+import { RealtimeBridge } from "@/components/realtime-bridge";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
+      <RealtimeBridge />
       <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 p-6">{children}</main>

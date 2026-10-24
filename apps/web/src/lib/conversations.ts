@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  QueryClient,
 } from "@tanstack/react-query";
 import type {
   ConversationDto,
@@ -16,6 +17,7 @@ import type {
 } from "@chat2order/shared/conversation";
 import type { CustomerInput } from "@chat2order/shared/customer";
 import { ApiError, apiFetch } from "@/lib/api";
+import { useRealtimeConnected } from "@/lib/realtime-store";
 
 export type ConversationListParams = {
   q: string;
@@ -25,8 +27,23 @@ export type ConversationListParams = {
 };
 
 const LIST_KEY = ["conversation-list"] as const;
+const REALTIME_BACKSTOP_MS = 60_000;
+
+function pollInterval(realtimeConnected: boolean, fallbackMs: number): number {
+  return realtimeConnected ? REALTIME_BACKSTOP_MS : fallbackMs;
+}
+
+export function invalidateConversationData(queryClient: QueryClient, conversationId?: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: LIST_KEY }),
+    queryClient.invalidateQueries({
+      queryKey: conversationId ? ["conversation", conversationId] : ["conversation"],
+    }),
+  ]);
+}
 
 export function useConversations(params: ConversationListParams) {
+  const realtimeConnected = useRealtimeConnected();
   return useQuery({
     queryKey: [...LIST_KEY, "list", params],
     queryFn: () => {
@@ -39,33 +56,37 @@ export function useConversations(params: ConversationListParams) {
       return apiFetch<ConversationListResponse>(`/conversations?${search.toString()}`);
     },
     placeholderData: keepPreviousData,
-    refetchInterval: 5000,
+    refetchInterval: pollInterval(realtimeConnected, 5000),
   });
 }
 
 // Số hội thoại có tin chưa đọc, hiện thành chấm đỏ ở thanh bên
 export function useUnreadConversationCount() {
+  const realtimeConnected = useRealtimeConnected();
   return useQuery({
     queryKey: [...LIST_KEY, "unread-count"],
     queryFn: async () =>
       (await apiFetch<ConversationListResponse>("/conversations?unread=true&pageSize=1")).total,
-    refetchInterval: 10_000,
+    refetchInterval: pollInterval(realtimeConnected, 10_000),
   });
 }
 
 export function useConversation(id: string) {
+  const realtimeConnected = useRealtimeConnected();
   return useQuery({
     queryKey: ["conversation", id],
     queryFn: async () =>
       (await apiFetch<{ conversation: ConversationDto }>(`/conversations/${id}`)).conversation,
     // Không thăm dò tiếp khi đã lỗi (ví dụ 404), và không thử lại khi hội thoại không tồn tại
-    refetchInterval: (query) => (query.state.status === "error" ? false : 5000),
+    refetchInterval: (query) =>
+      query.state.status === "error" ? false : pollInterval(realtimeConnected, 5000),
     retry: (failureCount, error) =>
       !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
 }
 
 export function useMessages(conversationId: string) {
+  const realtimeConnected = useRealtimeConnected();
   return useInfiniteQuery({
     queryKey: ["conversation", conversationId, "messages"],
     queryFn: ({ pageParam }) => {
@@ -77,7 +98,7 @@ export function useMessages(conversationId: string) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.items[0]?.id : undefined),
-    refetchInterval: 3000,
+    refetchInterval: pollInterval(realtimeConnected, 3000),
   });
 }
 

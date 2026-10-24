@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/lib/auth";
 import { useUnreadConversationCount } from "@/lib/conversations";
 import { cn } from "@/lib/utils";
+import { RealtimeStatus } from "@/components/realtime-status";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/inbox", label: "Hộp thư", icon: Inbox },
@@ -79,6 +80,7 @@ export function Sidebar() {
           Đăng xuất
         </Button>
         <HealthStatus />
+        <RealtimeStatus />
       </div>
     </aside>
   );
