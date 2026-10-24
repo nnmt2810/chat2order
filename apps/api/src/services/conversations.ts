@@ -13,6 +13,7 @@ import type { CustomerInput } from "@chat2order/shared/customer";
 import { AppError } from "../lib/app-error.js";
 import { prisma } from "../lib/prisma.js";
 import { prismaErrorCode } from "../lib/prisma-error.js";
+import { emitConversationChanged } from "../realtime.js";
 
 const PREVIEW_LENGTH = 100;
 
@@ -138,8 +139,11 @@ export async function ingestInboundMessage(input: IngestInput): Promise<IngestRe
         return { conversation, message };
       });
 
+      const conversationDto = toConversationDto(result.conversation);
+      emitConversationChanged(shopId, conversationDto.id);
+
       return {
-        conversation: toConversationDto(result.conversation),
+        conversation: conversationDto,
         message: toMessageDto(result.message),
         duplicate: false,
       };
@@ -275,6 +279,10 @@ export async function markConversationRead(shopId: string, id: string): Promise<
   if (result.count === 0) {
     throw conversationNotFound();
   }
+  if (result.count === 0) {
+    throw conversationNotFound();
+  }
+  emitConversationChanged(shopId, id);
 }
 
 // Chủ shop trả lời: lưu tin OUTBOUND, đánh dấu đã đọc, cập nhật xem trước của hội thoại
@@ -307,6 +315,7 @@ export async function replyToConversation(
     });
   });
 
+  emitConversationChanged(shopId, conversationId);
   return toMessageDto(row);
 }
 
@@ -332,6 +341,7 @@ export async function linkConversationCustomer(
       data: { customerId },
       include: customerNameSelect,
     });
+    emitConversationChanged(shopId, conversationId);
     return toConversationDto(row);
   } catch (err) {
     if (prismaErrorCode(err) === "P2025") {
@@ -387,5 +397,6 @@ export async function createCustomerFromConversation(
   if (!row) {
     throw conversationNotFound();
   }
+  emitConversationChanged(shopId, conversationId);
   return toConversationDto(row);
 }
