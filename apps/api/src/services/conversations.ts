@@ -82,52 +82,89 @@ type IngestInput = {
   displayName: string;
   customerId: string | null;
   text: string;
+  // Mã tin nhắn do kênh cung cấp, dùng để chống gửi trùng khi kênh gửi lại cùng một tin
+  externalMessageId?: string | null;
+};
+
+type IngestResult = {
+  conversation: ConversationDto;
+  message: MessageDto;
+  duplicate: boolean;
 };
 
 // Cổng vào chung cho mọi kênh: Zalo, Messenger, web chat, giả lập đều gọi hàm này
-export async function ingestInboundMessage(
-  input: IngestInput,
-): Promise<{ conversation: ConversationDto; message: MessageDto }> {
+export async function ingestInboundMessage(input: IngestInput): Promise<IngestResult> {
   const { shopId, channel, externalId, displayName, customerId, text } = input;
+  const externalMessageId = input.externalMessageId ?? null;
   const now = new Date();
   const preview = makePreview(text);
 
-  const result = await prisma.$transaction(async (tx) => {
-    const conversation = await tx.conversation.upsert({
-      where: { shopId_channel_externalId: { shopId, channel, externalId } },
-      create: {
-        shopId,
-        channel,
-        externalId,
-        displayName,
-        customerId,
-        unreadCount: 1,
-        lastMessageAt: now,
-        lastMessagePreview: preview,
-        lastMessageDirection: "INBOUND",
-      },
-      update: {
-        unreadCount: { increment: 1 },
-        lastMessageAt: now,
-        lastMessagePreview: preview,
-        lastMessageDirection: "INBOUND",
-        ...(displayName ? { displayName } : {}),
-        ...(customerId ? { customerId } : {}),
-      },
-      include: customerNameSelect,
-    });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const conversation = await tx.conversation.upsert({
+          where: { shopId_channel_externalId: { shopId, channel, externalId } },
+          create: {
+            shopId,
+            channel,
+            externalId,
+            displayName,
+            customerId,
+            unreadCount: 1,
+            lastMessageAt: now,
+            lastMessagePreview: preview,
+            lastMessageDirection: "INBOUND",
+          },
+          update: {
+            unreadCount: { increment: 1 },
+            lastMessageAt: now,
+            lastMessagePreview: preview,
+            lastMessageDirection: "INBOUND",
+            ...(displayName ? { displayName } : {}),
+            ...(customerId ? { customerId } : {}),
+          },
+          include: customerNameSelect,
+        });
 
-    const message = await tx.message.create({
-      data: { conversationId: conversation.id, direction: "INBOUND", text },
-    });
+        const message = await tx.message.create({
+          data: {
+            conversationId: conversation.id,
+            direction: "INBOUND",
+            text,
+            ...(externalMessageId ? { externalId: externalMessageId } : {}),
+          },
+        });
 
-    return { conversation, message };
-  });
+        return { conversation, message };
+      });
 
-  return {
-    conversation: toConversationDto(result.conversation),
-    message: toMessageDto(result.message),
-  };
+      return {
+        conversation: toConversationDto(result.conversation),
+        message: toMessageDto(result.message),
+        duplicate: false,
+      };
+    } catch (err) {
+      if (prismaErrorCode(err) !== "P2002") throw err;
+
+      // Vi phạm ràng buộc unique: hoặc tin này đã được lưu từ lần gửi trước (gửi trùng)...
+      if (externalMessageId) {
+        const existing = await prisma.message.findFirst({
+          where: { externalId: externalMessageId, conversation: { shopId, channel, externalId } },
+          include: { conversation: { include: customerNameSelect } },
+        });
+        if (existing) {
+          return {
+            conversation: toConversationDto(existing.conversation),
+            message: toMessageDto(existing),
+            duplicate: true,
+          };
+        }
+      }
+      // ...hoặc hai tin đầu tiên của một khách mới đến cùng lúc, tranh nhau tạo hội thoại: thử lại một lần
+    }
+  }
+
+  throw new AppError(409, "Không thể xử lý tin nhắn lúc này, vui lòng thử lại", "MESSAGE_CONFLICT");
 }
 
 export async function simulateInboundMessage(shopId: string, input: SimulatedMessageInput) {
