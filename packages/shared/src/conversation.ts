@@ -96,3 +96,34 @@ export const linkCustomerSchema = z.object({
 
 export type ReplyMessageInput = z.infer<typeof replyMessageSchema>;
 export type LinkCustomerInput = z.infer<typeof linkCustomerSchema>;
+
+// Widget web chat: các API công khai, không cần đăng nhập
+export const webChatVisitorIdSchema = z.uuid();
+
+export const webChatMessageSchema = z.object({
+  shopKey: z.uuid(),
+  visitorId: z.uuid(),
+  messageId: z.uuid(),
+  displayName: z.string().trim().max(100).optional(),
+  text: messageTextSchema,
+});
+
+export const webChatPollQuerySchema = z.object({
+  shopKey: z.uuid(),
+  after: z.string().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type WebChatMessageInput = z.infer<typeof webChatMessageSchema>;
+export type WebChatPollQuery = z.infer<typeof webChatPollQuerySchema>;
+
+export type WebChatMessageDto = {
+  id: string;
+  direction: MessageDirection;
+  text: string;
+  createdAt: string;
+};
+
+export type WebChatSendResponse = { message: WebChatMessageDto; duplicate: boolean };
+export type WebChatMessagesResponse = { items: WebChatMessageDto[] };
+export type WebChatSettings = { webChatKey: string };
