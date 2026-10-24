@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SimulatorThread } from "@/components/simulator/simulator-thread";
 import { useSimulateMessage } from "@/lib/conversations";
 
 type Mode = "customer" | "visitor";
@@ -50,9 +51,12 @@ export function SimulatorView() {
   const [formError, setFormError] = useState<string | null>(null);
   const [lastConversationId, setLastConversationId] = useState<string | null>(null);
 
+  function resetThread() {
+    setLastConversationId(null);
+  }
+
   async function send() {
     setFormError(null);
-    setLastConversationId(null);
 
     const trimmed = text.trim();
     if (!trimmed) {
@@ -113,7 +117,10 @@ export function SimulatorView() {
               size="sm"
               variant={mode === "customer" ? "default" : "outline"}
               aria-pressed={mode === "customer"}
-              onClick={() => setMode("customer")}
+              onClick={() => {
+                setMode("customer");
+                resetThread();
+              }}
             >
               Khách hàng có sẵn
             </Button>
@@ -122,7 +129,10 @@ export function SimulatorView() {
               size="sm"
               variant={mode === "visitor" ? "default" : "outline"}
               aria-pressed={mode === "visitor"}
-              onClick={() => setMode("visitor")}
+              onClick={() => {
+                setMode("visitor");
+                resetThread();
+              }}
             >
               Khách lạ
             </Button>
@@ -156,7 +166,10 @@ export function SimulatorView() {
                   id="visitorId"
                   value={visitorId}
                   maxLength={64}
-                  onChange={(event) => setVisitorId(event.target.value)}
+                  onChange={(event) => {
+                    setVisitorId(event.target.value);
+                    resetThread();
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">
                   Cùng mã thì cùng một hội thoại. Đổi mã để giả lập một khách lạ khác.
@@ -239,7 +252,29 @@ export function SimulatorView() {
         </CardContent>
       </Card>
 
-      <CustomerPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onSelect={setCustomer} />
+      {lastConversationId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Màn hình của khách</CardTitle>
+            <CardDescription>
+              Hội thoại nhìn từ phía khách. Trả lời của cửa hàng hiện ở bên trái, tự cập nhật sau
+              vài giây.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SimulatorThread conversationId={lastConversationId} />
+          </CardContent>
+        </Card>
+      )}
+
+      <CustomerPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(next) => {
+          setCustomer(next);
+          resetThread();
+        }}
+      />
     </div>
   );
 }
