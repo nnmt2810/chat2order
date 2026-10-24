@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { UserRound } from "lucide-react";
 import { channelLabels, type MessageDto } from "@chat2order/shared/conversation";
+import { CustomerLinkCard } from "@/components/inbox/customer-link-card";
+import { ReplyComposer } from "@/components/inbox/reply-composer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ApiError } from "@/lib/api";
 import {
   flattenMessagePages,
@@ -29,6 +39,11 @@ function MessageBubble({ message }: { message: MessageDto }) {
           inbound ? "rounded-bl-sm bg-muted" : "rounded-br-sm bg-primary text-primary-foreground",
         )}
       >
+        {!inbound && (
+          <p className="mb-0.5 text-[10px] font-medium text-primary-foreground/80">
+            {message.authorName ?? "Cửa hàng"}
+          </p>
+        )}
         <p className="whitespace-pre-wrap wrap-break-words">{message.text}</p>
         <p
           className={cn(
@@ -51,6 +66,7 @@ export function ConversationView({ id }: { id: string }) {
   } = useConversation(id);
   const messagesQuery = useMessages(id);
   const { mutate: markRead } = useMarkConversationRead(id);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -90,6 +106,11 @@ export function ConversationView({ id }: { id: string }) {
     );
   }
 
+  const replyHint =
+    conversation?.channel === "SIMULATOR"
+      ? "Ctrl + Enter để gửi. Khách giả lập thấy tin này ở trang Giả lập khách."
+      : "Ctrl + Enter để gửi. Tin được lưu trong hệ thống, chưa gửi ra kênh bên ngoài.";
+
   return (
     <div className="flex h-full gap-4">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
@@ -106,7 +127,20 @@ export function ConversationView({ id }: { id: string }) {
               </p>
             )}
           </div>
-          {conversation && <Badge variant="outline">{channelLabels[conversation.channel]}</Badge>}
+          {conversation && (
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge variant="outline">{channelLabels[conversation.channel]}</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="xl:hidden"
+                onClick={() => setInfoOpen(true)}
+              >
+                <UserRound className="h-4 w-4" />
+                Khách hàng
+              </Button>
+            </div>
+          )}
         </div>
 
         <div
@@ -162,9 +196,16 @@ export function ConversationView({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-          Chế độ xem: trả lời khách sẽ có ở phiên bản sau. Tin nhắn tự cập nhật sau vài giây.
-        </div>
+        {conversation && (
+          <ReplyComposer
+            conversationId={id}
+            hint={replyHint}
+            onSent={() => {
+              // Vừa gửi tin thì luôn cuộn xuống để thấy tin của mình
+              stickToBottom.current = true;
+            }}
+          />
+        )}
       </div>
 
       <aside className="hidden w-72 shrink-0 space-y-4 xl:block">
@@ -178,22 +219,20 @@ export function ConversationView({ id }: { id: string }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Khách hàng</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            {conversation?.customerName ? (
-              <div className="font-medium">{conversation.customerName}</div>
-            ) : (
-              <p className="text-muted-foreground">
-                Khách này chưa có hồ sơ. Việc liên kết hoặc tạo hồ sơ từ hội thoại sẽ có ở phiên bản
-                sau.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {conversation && <CustomerLinkCard conversation={conversation} />}
       </aside>
+
+      {conversation && (
+        <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Khách hàng</DialogTitle>
+              <DialogDescription>Hồ sơ khách hàng gắn với hội thoại này.</DialogDescription>
+            </DialogHeader>
+            <CustomerLinkCard conversation={conversation} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
