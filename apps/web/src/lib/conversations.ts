@@ -14,6 +14,7 @@ import type {
   MessageListResponse,
   SimulatedMessageInput,
 } from "@chat2order/shared/conversation";
+import type { CustomerInput } from "@chat2order/shared/customer";
 import { ApiError, apiFetch } from "@/lib/api";
 
 export type ConversationListParams = {
@@ -128,5 +129,55 @@ export function useSimulateMessage() {
         queryClient.invalidateQueries({ queryKey: LIST_KEY }),
         queryClient.invalidateQueries({ queryKey: ["conversation"] }),
       ]),
+  });
+}
+
+function useInvalidateConversation(conversationId: string) {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: LIST_KEY }),
+      // Khóa tiền tố: làm mới cả hội thoại lẫn danh sách tin nhắn của nó
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] }),
+    ]);
+}
+
+export function useReplyToConversation(conversationId: string) {
+  const invalidate = useInvalidateConversation(conversationId);
+  return useMutation({
+    mutationFn: (text: string) =>
+      apiFetch<{ message: MessageDto }>(`/conversations/${conversationId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }),
+    onSettled: invalidate,
+  });
+}
+
+// customerId = null để gỡ liên kết
+export function useLinkCustomer(conversationId: string) {
+  const invalidate = useInvalidateConversation(conversationId);
+  return useMutation({
+    mutationFn: (customerId: string | null) =>
+      apiFetch<{ conversation: ConversationDto }>(`/conversations/${conversationId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ customerId }),
+      }),
+    onSettled: invalidate,
+  });
+}
+
+export function useCreateCustomerFromConversation(conversationId: string) {
+  const invalidate = useInvalidateConversation(conversationId);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CustomerInput) =>
+      apiFetch<{ conversation: ConversationDto }>(`/conversations/${conversationId}/customer`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // Danh sách khách hàng cũng đổi vì có thêm một khách mới
+    onSettled: () =>
+      Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["customers"] })]),
   });
 }
