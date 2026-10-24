@@ -15,6 +15,7 @@ enum Role {
 model Shop {
   id        String   @id @default(uuid())
   name      String
+  webChatKey String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid  
   orderSeq  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,8 +176,10 @@ model Message {
   text           String
   authorId       String?
   author         User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  externalId     String?
   createdAt      DateTime         @default(now())
 
   @@index([conversationId, createdAt])
   @@map("messages")
+  @@unique([conversationId, externalId])
 }
