@@ -13,12 +13,16 @@ import { customersRouter } from "./routes/customers.js";
 import { ordersRouter } from "./routes/orders.js";
 import { conversationsRouter } from "./routes/conversations.js";
 import { simulatorRouter } from "./routes/simulator.js";
+import { shopRouter } from "./routes/shop.js";
+import { webChatRouter } from "./routes/web-chat.js";
 
 export function createApp() {
   const app = express();
   app.use(cookieParser());
 
   app.use(helmet());
+  // Endpoint công khai cho widget
+  app.use("/webhooks/web-chat", webChatRouter);
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
   app.use(
@@ -37,6 +41,8 @@ export function createApp() {
   app.use("/orders", ordersRouter);
   app.use("/conversations", conversationsRouter);
   app.use("/simulator", simulatorRouter);
+  app.use("/simulator", simulatorRouter);
+  app.use("/shop", shopRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
