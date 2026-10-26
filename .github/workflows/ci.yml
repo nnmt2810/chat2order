@@ -17,11 +17,23 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       # Giá trị giả lập chỉ để code khởi động được trong CI, không phải bí mật
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chat2order
       JWT_SECRET: ci-only-placeholder-secret-0123456789abcdef
+      REDIS_URL: redis://localhost:6379
+      REQUIRE_REDIS_TESTS: "1"
 
     steps:
       - uses: actions/checkout@v7
