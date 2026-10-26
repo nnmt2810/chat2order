@@ -14,6 +14,7 @@ import { AppError } from "../lib/app-error.js";
 import { prisma } from "../lib/prisma.js";
 import { prismaErrorCode } from "../lib/prisma-error.js";
 import { emitConversationChanged } from "../realtime.js";
+import { enqueueConversationProcessing } from "../queue/conversation-queue.js";
 
 const PREVIEW_LENGTH = 100;
 
@@ -141,6 +142,7 @@ export async function ingestInboundMessage(input: IngestInput): Promise<IngestRe
 
       const conversationDto = toConversationDto(result.conversation);
       emitConversationChanged(shopId, conversationDto.id);
+      enqueueConversationProcessing(shopId, conversationDto.id);
 
       return {
         conversation: conversationDto,
