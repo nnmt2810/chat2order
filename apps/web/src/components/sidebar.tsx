@@ -9,6 +9,7 @@ import {
   LogOut,
   Package,
   Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { HealthStatus } from "@/components/health-status";
@@ -24,6 +25,7 @@ const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/products", label: "Sản phẩm", icon: Package },
   { href: "/customers", label: "Khách hàng", icon: Users },
   { href: "/simulator", label: "Giả lập khách", icon: FlaskConical },
+  { href: "/settings", label: "Cài đặt", icon: Settings },
 ];
 
 export function Sidebar() {

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trang thử widget Chat2Order</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Cửa hàng Demo</h1>
+    <p>
+      Đây là trang web giả lập của một cửa hàng. Bong bóng chat ở góc phải bên dưới chính là widget
+      Chat2Order.
+    </p>
+    <p id="status"></p>
+    <script>
+      (function () {
+        var shopKey = new URLSearchParams(location.search).get("shopKey") || "";
+        var status = document.getElementById("status");
+        var uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(shopKey)) {
+          status.textContent =
+            "Thiếu hoặc sai tham số shopKey. Hãy mở trang này từ mục Cài đặt trong dashboard.";
+          return;
+        }
+        // Chỉ dùng khi development
+        var tag = document.createElement("script");
+        tag.src = "/chat-widget.js";
+        tag.setAttribute("data-shop-key", shopKey);
+        tag.setAttribute("data-api-url", "http://localhost:4000");
+        document.body.appendChild(tag);
+      })();
+    </script>
+  </body>
+</html>
