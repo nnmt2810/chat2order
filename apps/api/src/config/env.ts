@@ -10,6 +10,12 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32, "JWT_SECRET phải có ít nhất 32 ký tự"),
+  REDIS_URL: z.string().min(1),
+  WORKER_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  BATCH_QUIET_MS: z.coerce.number().int().min(100).max(60_000).default(4000),
 });
 
 const parsed = envSchema.safeParse(process.env);
