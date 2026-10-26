@@ -177,9 +177,12 @@ model Message {
   authorId       String?
   author         User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
   externalId     String?
+  processedAt    DateTime?
+  processAttempts Int       @default(0)
   createdAt      DateTime         @default(now())
 
   @@index([conversationId, createdAt])
   @@map("messages")
   @@unique([conversationId, externalId])
+  @@index([conversationId, processedAt])
 }
