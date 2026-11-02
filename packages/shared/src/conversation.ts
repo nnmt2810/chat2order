@@ -41,6 +41,10 @@ export const conversationListQuerySchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+  attention: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export const messageListQuerySchema = z.object({
@@ -127,3 +131,71 @@ export type WebChatMessageDto = {
 export type WebChatSendResponse = { message: WebChatMessageDto; duplicate: boolean };
 export type WebChatMessagesResponse = { items: WebChatMessageDto[] };
 export type WebChatSettings = { webChatKey: string };
+
+// ---- Phân tích ý định bằng AI ----
+export const intentTypes = [
+  "ORDER",
+  "ORDER_CHANGE",
+  "ORDER_STATUS",
+  "FAQ",
+  "COMPLAINT",
+  "CONFIRMATION",
+  "OTHER",
+] as const;
+export type IntentType = (typeof intentTypes)[number];
+
+export const intentLabels: Record<IntentType, string> = {
+  ORDER: "Đặt hàng",
+  ORDER_CHANGE: "Sửa hoặc hủy đơn",
+  ORDER_STATUS: "Hỏi tình trạng đơn",
+  FAQ: "Hỏi đáp",
+  COMPLAINT: "Khiếu nại",
+  CONFIRMATION: "Xác nhận",
+  OTHER: "Khác",
+};
+
+export function isIntentType(value: string): value is IntentType {
+  return (intentTypes as readonly string[]).includes(value);
+}
+
+export const routingReasons = [
+  "COMPLAINT",
+  "ASKS_FOR_HUMAN",
+  "LOW_CONFIDENCE",
+  "AI_FAILED",
+] as const;
+export type RoutingReason = (typeof routingReasons)[number];
+
+export const routingReasonLabels: Record<RoutingReason, string> = {
+  COMPLAINT: "Khách khiếu nại",
+  ASKS_FOR_HUMAN: "Khách muốn gặp nhân viên",
+  LOW_CONFIDENCE: "AI không chắc chắn",
+  AI_FAILED: "AI không xử lý được",
+};
+
+export function isRoutingReason(value: string): value is RoutingReason {
+  return (routingReasons as readonly string[]).includes(value);
+}
+
+export const intentResultSchema = z.object({
+  type: z.enum(intentTypes),
+  confidence: z.number(),
+  topic: z.string(),
+});
+export type IntentResult = z.infer<typeof intentResultSchema>;
+
+export type AnalysisStatus = "COMPLETED" | "FAILED";
+
+export type ConversationAnalysisDto = {
+  id: string;
+  status: AnalysisStatus;
+  intents: IntentResult[];
+  needsHuman: boolean;
+  reasons: RoutingReason[];
+  errorCode: string | null;
+  messageCount: number;
+  model: string;
+  createdAt: string;
+};
+
+export type ConversationAnalysesResponse = { items: ConversationAnalysisDto[] };
