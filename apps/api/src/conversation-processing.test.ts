@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LlmError } from "./llm/errors.js";
 
 vi.mock("./lib/prisma.js", () => ({
   prisma: {
@@ -114,10 +115,35 @@ describe("processConversation", () => {
       data: { processAttempts: { increment: 1 } },
     });
   });
+
+  it("does not count a temporary AI failure against the messages", async () => {
+    findMessages.mockResolvedValueOnce([msg("m1")] as never);
+    handle.mockRejectedValue(new LlmError("RATE_LIMITED", "slow down", true));
+
+    await expect(processConversation("shop-1", "cv1")).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+
+    expect(updateMessages).not.toHaveBeenCalled();
+  });
+
+  it("still counts a permanent AI failure", async () => {
+    findMessages.mockResolvedValueOnce([msg("m1")] as never);
+    handle.mockRejectedValue(new LlmError("PROVIDER_ERROR", "bad key", false));
+
+    await expect(processConversation("shop-1", "cv1")).rejects.toMatchObject({
+      code: "PROVIDER_ERROR",
+    });
+
+    expect(updateMessages).toHaveBeenCalledWith({
+      where: { id: { in: ["m1"] } },
+      data: { processAttempts: { increment: 1 } },
+    });
+  });
 });
 
 describe("findStaleConversations", () => {
-  it("finds conversations with old unprocessed inbound messages", async () => {
+  it("finds conversations with old unprocessed inbound messages, within the last 24 hours", async () => {
     findConversations.mockResolvedValue([{ id: "cv1", shopId: "shop-1" }] as never);
     const cutoff = new Date("2026-10-12T00:00:00Z");
 
@@ -132,11 +158,30 @@ describe("findStaleConversations", () => {
               direction: "INBOUND",
               processedAt: null,
               processAttempts: { lt: MAX_PROCESS_ATTEMPTS },
-              createdAt: { lt: cutoff },
+              createdAt: { lt: cutoff, gt: expect.any(Date) },
             },
           },
         },
         take: 100,
+      }),
+    );
+  });
+
+  it("accepts a custom lower bound and limit", async () => {
+    findConversations.mockResolvedValue([]);
+    const cutoff = new Date("2026-10-12T00:00:00Z");
+    const newerThan = new Date("2026-10-11T00:00:00Z");
+
+    await findStaleConversations(cutoff, { newerThan, limit: 10 });
+
+    expect(findConversations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          messages: {
+            some: expect.objectContaining({ createdAt: { lt: cutoff, gt: newerThan } }),
+          },
+        },
+        take: 10,
       }),
     );
   });
