@@ -18,9 +18,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@ai-sdk/google": "^4.0.109",
     "@chat2order/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "ai": "^7.0.159",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.4.2",
     "cookie-parser": "^1.4.7",
