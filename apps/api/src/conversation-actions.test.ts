@@ -38,6 +38,8 @@ const conversationRow = {
   lastMessageAt: new Date("2026-10-12T00:00:00Z"),
   lastMessagePreview: "xin chao",
   lastMessageDirection: "INBOUND",
+  needsAttention: false,
+  lastIntents: [],
   createdAt: new Date("2026-10-12T00:00:00Z"),
   updatedAt: new Date("2026-10-12T00:00:00Z"),
   customer: { name: "Chi Lan" },

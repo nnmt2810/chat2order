@@ -15,7 +15,8 @@
     "db:logs": "docker compose logs -f",
     "dev:web": "pnpm --filter @chat2order/web dev",
     "format:check": "prettier --check .",
-    "llm:check": "pnpm --filter @chat2order/api llm:check"
+    "llm:check": "pnpm --filter @chat2order/api llm:check",
+    "llm:classify": "pnpm --filter @chat2order/api llm:classify"
   },
   "keywords": [],
   "author": "",

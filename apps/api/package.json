@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "llm:check": "tsx src/scripts/llm-check.ts"
+    "llm:check": "tsx src/scripts/llm-check.ts",
+    "llm:classify": "tsx src/scripts/classify-samples.ts"
   },
   "keywords": [],
   "author": "",
