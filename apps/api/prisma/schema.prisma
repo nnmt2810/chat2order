@@ -159,6 +159,9 @@ model Conversation {
   lastMessagePreview String    @default("")
   lastMessageDirection MessageDirection @default(INBOUND)
   messages           Message[]
+  needsAttention Boolean  @default(false)
+  lastIntents    String[] @default([])
+  analyses       ConversationAnalysis[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -166,6 +169,7 @@ model Conversation {
   @@index([shopId, lastMessageAt])
   @@index([customerId])
   @@map("conversations")
+  @@index([shopId, needsAttention])
 }
 
 model Message {
@@ -185,4 +189,30 @@ model Message {
   @@map("messages")
   @@unique([conversationId, externalId])
   @@index([conversationId, processedAt])
+}
+
+enum AnalysisStatus {
+  COMPLETED
+  FAILED
+}
+
+model ConversationAnalysis {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lastMessageId  String         @unique
+  messageCount   Int
+  status         AnalysisStatus
+  intents        Json
+  needsHuman     Boolean
+  reasons        String[]       @default([])
+  errorCode      String?
+  model          String
+  inputTokens    Int?
+  outputTokens   Int?
+  latencyMs      Int?
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("conversation_analyses")
 }
