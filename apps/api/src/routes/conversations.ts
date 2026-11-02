@@ -11,10 +11,12 @@ import {
   createCustomerFromConversation,
   getConversation,
   linkConversationCustomer,
+  listConversationAnalyses,
   listConversations,
   listMessages,
   markConversationRead,
   replyToConversation,
+  resolveConversation,
 } from "../services/conversations.js";
 
 export const conversationsRouter = Router();
@@ -36,6 +38,17 @@ conversationsRouter.get("/:id/messages", async (req, res) => {
   const query = messageListQuerySchema.parse(req.query);
   const { shopId } = getAuth(res);
   res.json(await listMessages(shopId, req.params.id, query));
+});
+
+conversationsRouter.get("/:id/analyses", async (req, res) => {
+  const { shopId } = getAuth(res);
+  res.json(await listConversationAnalyses(shopId, req.params.id));
+});
+
+conversationsRouter.post("/:id/resolve", async (req, res) => {
+  const { shopId } = getAuth(res);
+  await resolveConversation(shopId, req.params.id);
+  res.status(204).end();
 });
 
 conversationsRouter.post("/:id/messages", async (req, res) => {

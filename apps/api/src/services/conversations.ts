@@ -1,6 +1,9 @@
+import { intentResultSchema, isIntentType, isRoutingReason } from "@chat2order/shared/conversation";
 import type {
   Channel,
   ConversationDto,
+  ConversationAnalysesResponse,
+  ConversationAnalysisDto,
   ConversationListQuery,
   ConversationListResponse,
   MessageDirection,
@@ -9,6 +12,7 @@ import type {
   MessageListResponse,
   SimulatedMessageInput,
 } from "@chat2order/shared/conversation";
+import { z } from "zod";
 import type { CustomerInput } from "@chat2order/shared/customer";
 import { AppError } from "../lib/app-error.js";
 import { prisma } from "../lib/prisma.js";
@@ -27,6 +31,8 @@ type ConversationRow = {
   lastMessageAt: Date;
   lastMessagePreview: string;
   lastMessageDirection: MessageDirection;
+  needsAttention: boolean;
+  lastIntents: string[];
   createdAt: Date;
   customer: { name: string } | null;
 };
@@ -54,6 +60,8 @@ function toConversationDto(row: ConversationRow): ConversationDto {
     lastMessageAt: row.lastMessageAt.toISOString(),
     lastMessagePreview: row.lastMessagePreview,
     lastMessageDirection: row.lastMessageDirection,
+    needsAttention: row.needsAttention,
+    lastIntents: row.lastIntents.filter(isIntentType),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -211,6 +219,7 @@ export async function listConversations(
   const where = {
     shopId,
     ...(query.unread ? { unreadCount: { gt: 0 } } : {}),
+    ...(query.attention ? { needsAttention: true } : {}),
     ...(query.q
       ? {
           OR: [
@@ -305,6 +314,7 @@ export async function replyToConversation(
         lastMessagePreview: makePreview(text),
         lastMessageDirection: "OUTBOUND",
         unreadCount: 0,
+        needsAttention: false,
       },
     });
     if (claimed.count === 0) {
@@ -401,4 +411,64 @@ export async function createCustomerFromConversation(
   }
   emitConversationChanged(shopId, conversationId);
   return toConversationDto(row);
+}
+
+type AnalysisRow = {
+  id: string;
+  status: "COMPLETED" | "FAILED";
+  intents: unknown;
+  needsHuman: boolean;
+  reasons: string[];
+  errorCode: string | null;
+  messageCount: number;
+  model: string;
+  createdAt: Date;
+};
+
+function toAnalysisDto(row: AnalysisRow): ConversationAnalysisDto {
+  // JSON lưu sẵn không được tin tuyệt đối: kiểm tra lại mỗi lần đọc
+  const intents = z.array(intentResultSchema).safeParse(row.intents);
+  return {
+    id: row.id,
+    status: row.status,
+    intents: intents.success ? intents.data : [],
+    needsHuman: row.needsHuman,
+    reasons: row.reasons.filter(isRoutingReason),
+    errorCode: row.errorCode,
+    messageCount: row.messageCount,
+    model: row.model,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export async function listConversationAnalyses(
+  shopId: string,
+  conversationId: string,
+): Promise<ConversationAnalysesResponse> {
+  const conversation = await prisma.conversation.findFirst({
+    where: { id: conversationId, shopId },
+    select: { id: true },
+  });
+  if (!conversation) {
+    throw conversationNotFound();
+  }
+
+  const rows = await prisma.conversationAnalysis.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 5,
+  });
+  return { items: rows.map(toAnalysisDto) };
+}
+
+// Chủ shop xác nhận đã xử lý xong, tắt cờ "cần người xem"
+export async function resolveConversation(shopId: string, id: string): Promise<void> {
+  const result = await prisma.conversation.updateMany({
+    where: { id, shopId },
+    data: { needsAttention: false },
+  });
+  if (result.count === 0) {
+    throw conversationNotFound();
+  }
+  emitConversationChanged(shopId, id);
 }

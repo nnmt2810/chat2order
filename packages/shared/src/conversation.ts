@@ -68,6 +68,8 @@ export type ConversationDto = {
   lastMessagePreview: string;
   lastMessageDirection: MessageDirection;
   createdAt: string;
+  needsAttention: boolean;
+  lastIntents: IntentType[];
 };
 
 export type MessageDto = {
