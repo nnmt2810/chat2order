@@ -1,17 +1,19 @@
+import { getLlmGateway } from "../llm/gateway.js";
 import { logger } from "../lib/logger.js";
 import type { ConversationBatch } from "./conversation-processing.js";
+import { analyzeBatch } from "./intent-analysis.js";
 
-// Sẽ thay thân hàm này bằng: phân loại ý định, trích xuất đơn, trả lời FAQ.
-// Hàm phải chịu được việc chạy lại trên cùng một lượt (hàng đợi đảm bảo "ít nhất một lần").
-// Log chỉ ghi id và số lượng, không ghi nội dung tin nhắn.
+// Điểm vào xử lý một lượt tin nhắn. Hàng đợi chạy "ít nhất một lần" nên mọi bước ở đây phải chạy lại được an toàn.
+// Giai đoạn 8C sẽ nối thêm bước trích xuất đơn hàng sau bước phân loại.
 export async function handleBatch(batch: ConversationBatch): Promise<void> {
-  logger.info(
-    {
-      shopId: batch.shopId,
-      conversationId: batch.conversationId,
-      messageCount: batch.messages.length,
-      messageIds: batch.messages.map((message) => message.id),
-    },
-    "Batch ready for processing",
-  );
+  const gateway = getLlmGateway();
+  if (!gateway) {
+    logger.debug(
+      { conversationId: batch.conversationId, messageCount: batch.messages.length },
+      "AI is off, batch skipped",
+    );
+    return;
+  }
+
+  await analyzeBatch(batch, gateway);
 }
