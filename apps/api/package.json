@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "llm:check": "tsx src/scripts/llm-check.ts"
   },
   "keywords": [],
   "author": "",
