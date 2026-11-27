@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { UserRound } from "lucide-react";
 import { channelLabels, type MessageDto } from "@chat2order/shared/conversation";
+import { AnalysisCard } from "@/components/inbox/analysis-card";
+import { AttentionBanner } from "@/components/inbox/attention-banner";
 import { CustomerLinkCard } from "@/components/inbox/customer-link-card";
 import { ReplyComposer } from "@/components/inbox/reply-composer";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +144,7 @@ export function ConversationView({ id }: { id: string }) {
             </div>
           )}
         </div>
-
+        {conversation?.needsAttention && <AttentionBanner conversationId={id} />}
         <div
           ref={containerRef}
           onScroll={onScroll}
@@ -209,6 +211,7 @@ export function ConversationView({ id }: { id: string }) {
       </div>
 
       <aside className="hidden w-72 shrink-0 space-y-4 xl:block">
+        <AnalysisCard conversationId={id} />
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Đơn hàng đề xuất</CardTitle>
@@ -226,10 +229,15 @@ export function ConversationView({ id }: { id: string }) {
         <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Khách hàng</DialogTitle>
-              <DialogDescription>Hồ sơ khách hàng gắn với hội thoại này.</DialogDescription>
+              <DialogTitle>Chi tiết hội thoại</DialogTitle>
+              <DialogDescription>
+                Phân tích AI và hồ sơ khách hàng gắn với hội thoại này.
+              </DialogDescription>
             </DialogHeader>
-            <CustomerLinkCard conversation={conversation} />
+            <div className="max-h-[70vh] space-y-4 overflow-y-auto">
+              <AnalysisCard conversationId={id} />
+              <CustomerLinkCard conversation={conversation} />
+            </div>
           </DialogContent>
         </Dialog>
       )}
