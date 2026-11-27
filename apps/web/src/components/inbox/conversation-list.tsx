@@ -7,10 +7,11 @@ import { channelLabels } from "@chat2order/shared/conversation";
 import { SearchBox } from "@/components/common/search-box";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useConversations } from "@/lib/conversations";
+import { useConversations, useAttentionConversationCount } from "@/lib/conversations";
 import { formatListTime } from "@/lib/format";
 import { useDebounce } from "@/lib/use-debounce";
 import { cn } from "@/lib/utils";
+import { IntentBadges, NeedsAttentionBadge } from "@/components/inbox/intent-badges";
 
 const PAGE_STEP = 30;
 const PAGE_MAX = 100;
@@ -21,6 +22,8 @@ export function ConversationList() {
 
   const [search, setSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const { data: attentionCount } = useAttentionConversationCount();
   const [pageSize, setPageSize] = useState(PAGE_STEP);
 
   const q = useDebounce(search.trim());
@@ -29,6 +32,7 @@ export function ConversationList() {
     unread: unreadOnly,
     page: 1,
     pageSize,
+    attention: attentionOnly,
   });
 
   const hasMore = data ? data.total > data.items.length : false;
@@ -56,6 +60,18 @@ export function ConversationList() {
           />
           Chỉ hiện tin chưa đọc
         </label>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={attentionOnly}
+            onChange={(event) => {
+              setAttentionOnly(event.target.checked);
+              setPageSize(PAGE_STEP);
+            }}
+          />
+          Chỉ hiện cần người xem
+          {attentionCount !== undefined && attentionCount > 0 ? ` (${attentionCount})` : ""}
+        </label>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -74,9 +90,11 @@ export function ConversationList() {
           <p className="p-3 text-sm text-muted-foreground">
             {q
               ? "Không tìm thấy hội thoại phù hợp."
-              : unreadOnly
-                ? "Không có tin nhắn chưa đọc."
-                : "Chưa có hội thoại nào. Dùng trang Giả lập khách để tạo tin nhắn thử."}
+              : attentionOnly
+                ? "Không có hội thoại nào cần người xem."
+                : unreadOnly
+                  ? "Không có tin nhắn chưa đọc."
+                  : "Chưa có hội thoại nào. Dùng trang Giả lập khách để tạo tin nhắn thử."}
           </p>
         )}
 
@@ -119,9 +137,13 @@ export function ConversationList() {
                           </span>
                         )}
                       </div>
-                      <Badge variant="outline" className="mt-1 text-[10px]">
-                        {channelLabels[conversation.channel]}
-                      </Badge>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <Badge variant="outline" className="text-[10px]">
+                          {channelLabels[conversation.channel]}
+                        </Badge>
+                        {conversation.needsAttention && <NeedsAttentionBadge />}
+                        <IntentBadges intents={conversation.lastIntents} />
+                      </div>
                     </Link>
                   </li>
                 );
