@@ -14,6 +14,7 @@ import type {
   MessageDto,
   MessageListResponse,
   SimulatedMessageInput,
+  ConversationAnalysesResponse,
 } from "@chat2order/shared/conversation";
 import type { CustomerInput } from "@chat2order/shared/customer";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -200,5 +201,36 @@ export function useCreateCustomerFromConversation(conversationId: string) {
     // Danh sách khách hàng cũng đổi vì có thêm một khách mới
     onSettled: () =>
       Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["customers"] })]),
+  });
+}
+
+// Số hội thoại đang bị gắn cờ cần người xem
+export function useAttentionConversationCount() {
+  const realtimeConnected = useRealtimeConnected();
+  return useQuery({
+    queryKey: [...LIST_KEY, "attention-count"],
+    queryFn: async () =>
+      (await apiFetch<ConversationListResponse>("/conversations?attention=true&pageSize=1")).total,
+    refetchInterval: pollInterval(realtimeConnected, 10_000),
+  });
+}
+
+// Khóa nằm dưới ["conversation", id] nên sự kiện realtime của hội thoại này cũng làm mới bản phân tích
+export function useConversationAnalyses(conversationId: string) {
+  const realtimeConnected = useRealtimeConnected();
+  return useQuery({
+    queryKey: ["conversation", conversationId, "analyses"],
+    queryFn: () =>
+      apiFetch<ConversationAnalysesResponse>(`/conversations/${conversationId}/analyses`),
+    refetchInterval: pollInterval(realtimeConnected, 5000),
+  });
+}
+
+export function useResolveConversation(conversationId: string) {
+  const invalidate = useInvalidateConversation(conversationId);
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<null>(`/conversations/${conversationId}/resolve`, { method: "POST" }),
+    onSettled: invalidate,
   });
 }
