@@ -25,6 +25,7 @@ export type ConversationListParams = {
   unread: boolean;
   page: number;
   pageSize: number;
+  attention: boolean;
 };
 
 const LIST_KEY = ["conversation-list"] as const;
@@ -52,6 +53,7 @@ export function useConversations(params: ConversationListParams) {
         page: String(params.page),
         pageSize: String(params.pageSize),
         unread: String(params.unread),
+        attention: String(params.attention),
       });
       if (params.q) search.set("q", params.q);
       return apiFetch<ConversationListResponse>(`/conversations?${search.toString()}`);
